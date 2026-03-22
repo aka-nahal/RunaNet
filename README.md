@@ -20,7 +20,11 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000/display](http://localhost:3000/display). Next rewrites `/api/*` to `http://127.0.0.1:8000/api/*`.
+Open [http://localhost:3000/display](http://localhost:3000/display).
+
+**SSR note:** the display page loads data in a Server Component. It calls FastAPI directly at `http://127.0.0.1:8000` (see `frontend/lib/server-api-base.ts`). Copy `frontend/.env.example` to `frontend/.env.local` and set `API_URL` if your API is elsewhere.
+
+Next rewrites `/api/*` → `:8000` only help **browser** requests, not RSC `fetch` on the server.
 
 Copy `backend/.env.example` to `backend/.env` and set `GEMINI_API_KEY` for AI routes.
 
