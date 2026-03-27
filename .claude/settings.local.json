@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc:*)",
+      "Bash(python -c \"from app.routers.layouts import router; print\\(''OK''\\)\")",
+      "Bash(npx next:*)",
+      "Bash(netstat -ano)",
+      "Bash(findstr \"LISTENING\")",
+      "Bash(findstr -E \":\\(3000|3001|3002|8000|8001|8002\\) \")",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(npx kill-port:*)",
+      "Bash(findstr :3000)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/admin/settings)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/admin/builder?layout=1)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/admin)",
+      "Bash(curl -s http://localhost:8000/api/layouts)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f''''{len\\(d\\)} layouts''''\\); [print\\(f''''  #{l[\"\"id\"\"]} {l[\"\"name\"\"]} \\({len\\(l[\"\"versions\"\"]\\)} vers\\)''''\\) for l in d]\")",
+      "Bash(curl -s -o /dev/null -w \"layouts:%{http_code} \" http://localhost:3000/admin/layouts)",
+      "Bash(curl -s -o /dev/null -w \"settings:%{http_code} \" http://localhost:3000/admin/settings)",
+      "Bash(curl -s -o /dev/null -w \"builder:%{http_code} \" http://localhost:3000/admin/builder)",
+      "Bash(curl -s -o /dev/null -w \"dashboard:%{http_code} \" http://localhost:3000/admin)",
+      "Bash(curl -s -o /dev/null -w \"display:%{http_code}\\\\n\" http://localhost:3000/display)",
+      "Bash(curl -s -o /dev/null -w \"builder:%{http_code} time:%{time_total}s\" http://localhost:3000/admin/builder)",
+      "Bash(curl -s -o /dev/null http://localhost:3000/admin/builder)",
+      "Bash(curl -s -o /dev/null http://localhost:3000/admin/layouts)",
+      "Bash(curl -s -o /dev/null http://localhost:3000/admin/settings)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f''''{len\\(d\\)} layouts''''\\); [print\\(f''''  #{l[\"\"id\"\"]} {l[\"\"name\"\"]}''''\\) for l in d]\" __NEW_LINE_be922bfac6efc5a0__ echo \"=== Media API ===\" curl -s http://localhost:8000/api/media)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f''''{len\\(d\\)} media items''''\\); [print\\(f''''  #{m[\"\"id\"\"]} {m[\"\"kind\"\"]} {m[\"\"filename\"\"]}''''\\) for m in d[:5]]\")",
+      "Bash(pip install:*)",
+      "Bash(python -m uvicorn app.main:app --reload --port 8000)",
+      "Bash(npm run:*)"
+    ]
+  }
+}

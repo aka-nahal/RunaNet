@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     gemini_api_key: str | None = None
     gemini_model: str = "gemini-2.0-flash"
     cors_origins: str = "http://localhost:3000"
+    openweather_api_key: str | None = None
 
     @property
     def cors_origin_list(self) -> list[str]:

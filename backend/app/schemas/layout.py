@@ -5,12 +5,12 @@ from pydantic import BaseModel, Field
 
 class TileCreate(BaseModel):
     tile_type: str = "notice"
-    grid_x: int = 0
-    grid_y: int = 0
-    grid_w: int = 1
-    grid_h: int = 1
-    z_index: int = 0
-    priority_weight: int = 0
+    grid_x: int = Field(default=0, ge=0)
+    grid_y: int = Field(default=0, ge=0)
+    grid_w: int = Field(default=1, ge=1, le=24)
+    grid_h: int = Field(default=1, ge=1, le=24)
+    z_index: int = Field(default=0, ge=0, le=99)
+    priority_weight: int = Field(default=0, ge=0, le=100)
     refresh_interval_sec: int | None = None
     animation_style: str | None = None
     config_json: str | None = None
@@ -80,9 +80,43 @@ class LayoutRead(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class LayoutVersionUpdate(BaseModel):
+    grid_cols: int | None = Field(default=None, ge=1, le=24)
+    grid_rows: int | None = Field(default=None, ge=1, le=24)
+    gap_px: int | None = Field(default=None, ge=0, le=32)
+    meta_json: str | None = None
+
+
+class TileBulkUpdateItem(BaseModel):
+    id: int
+    tile_type: str | None = None
+    grid_x: int | None = None
+    grid_y: int | None = None
+    grid_w: int | None = None
+    grid_h: int | None = None
+    z_index: int | None = None
+    priority_weight: int | None = None
+    notice_id: int | None = None
+    config_json: str | None = None
+    is_emergency_slot: bool | None = None
+
+
+class TileBulkUpdate(BaseModel):
+    tiles: list[TileBulkUpdateItem]
+
+
+class VersionClone(BaseModel):
+    source_version_id: int | None = None
+
+
 class LayoutCreate(BaseModel):
     name: str = "Untitled"
     description: str | None = None
-    grid_cols: int = 12
-    grid_rows: int = 12
-    gap_px: int = 8
+    grid_cols: int = Field(default=12, ge=1, le=24)
+    grid_rows: int = Field(default=12, ge=1, le=24)
+    gap_px: int = Field(default=8, ge=0, le=32)
+
+
+class LayoutUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None

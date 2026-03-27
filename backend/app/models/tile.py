@@ -25,9 +25,15 @@ class Tile(Base):
     __tablename__ = "tiles"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    layout_version_id: Mapped[int] = mapped_column(ForeignKey("layout_versions.id"), index=True)
-    notice_id: Mapped[int | None] = mapped_column(ForeignKey("notices.id"), nullable=True, index=True)
-    media_id: Mapped[int | None] = mapped_column(ForeignKey("media_assets.id"), nullable=True)
+    layout_version_id: Mapped[int] = mapped_column(
+        ForeignKey("layout_versions.id"), index=True
+    )
+    notice_id: Mapped[int | None] = mapped_column(
+        ForeignKey("notices.id"), nullable=True, index=True
+    )
+    media_id: Mapped[int | None] = mapped_column(
+        ForeignKey("media_assets.id"), nullable=True
+    )
 
     tile_type: Mapped[str] = mapped_column(String(32), default=TileType.NOTICE.value)
     grid_x: Mapped[int] = mapped_column(Integer, default=0)
