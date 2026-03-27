@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import type { TileRead, TileUpdate, NoticeRead } from "@/lib/types"
 import { TILE_TYPES } from "@/lib/types"
 import type { GridSpec } from "@/lib/grid-engine"
@@ -420,9 +420,15 @@ function CarouselEditor({ config, updateConfig, disabled }: {
   disabled: boolean
 }) {
   const slides = parseSlides(config.carouselSlides as string)
+  const [addMode, setAddMode] = useState<"upload" | "library" | "url">("upload")
   const [newUrl, setNewUrl] = useState("")
-  const [newType, setNewType] = useState<CarouselSlide["type"]>("image")
   const [newCaption, setNewCaption] = useState("")
+  const [uploading, setUploading] = useState(false)
+  const [dragOver, setDragOver] = useState(false)
+  const [library, setLibrary] = useState<{ id: number; url: string; kind: string; mime_type: string; filename: string }[]>([])
+  const [loadingLib, setLoadingLib] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   function setSlides(next: CarouselSlide[]) {
     updateConfig("carouselSlides", next.length > 0 ? stringifySlides(next) : undefined)
@@ -435,14 +441,82 @@ function CarouselEditor({ config, updateConfig, disabled }: {
     return "image"
   }
 
-  function addSlide() {
+  function addSlideFromUrl(url: string, caption?: string) {
+    const type = detectType(url)
+    setSlides([...slides, { type, url, caption: caption || undefined }])
+  }
+
+  function addUrlSlide() {
     const url = newUrl.trim()
     if (!url) return
-    const type = detectType(url)
-    setSlides([...slides, { type, url, caption: newCaption.trim() || undefined }])
+    addSlideFromUrl(url, newCaption.trim())
     setNewUrl("")
     setNewCaption("")
-    setNewType("image")
+  }
+
+  // Upload from desktop
+  async function handleUpload(file: File) {
+    setError(null)
+    const isImage = file.type.startsWith("image/")
+    const isPdf = file.type === "application/pdf"
+    const isVideo = file.type.startsWith("video/")
+    if (!isImage && !isPdf && !isVideo) {
+      setError("Supported: images, PDFs, videos")
+      return
+    }
+    if (file.size > 50 * 1024 * 1024) {
+      setError("File too large (max 50 MB)")
+      return
+    }
+    setUploading(true)
+    try {
+      const form = new FormData()
+      form.append("file", file)
+      const res = await fetch("/api/media", { method: "POST", body: form })
+      if (!res.ok) { setError("Upload failed"); return }
+      const data = await res.json()
+      const url = data.url || `/api/media/${data.id}`
+      const type: CarouselSlide["type"] = isPdf ? "pdf" : isVideo ? "video" : "image"
+      setSlides([...slides, { type, url, caption: file.name }])
+    } catch {
+      setError("Upload failed")
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault()
+    setDragOver(false)
+    const files = Array.from(e.dataTransfer.files)
+    files.forEach((f) => handleUpload(f))
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? [])
+    files.forEach((f) => handleUpload(f))
+    if (fileRef.current) fileRef.current.value = ""
+  }
+
+  // Library
+  async function loadLibrary() {
+    setLoadingLib(true)
+    try {
+      const res = await fetch("/api/media")
+      if (res.ok) setLibrary(await res.json())
+    } catch { /* ignore */ }
+    finally { setLoadingLib(false) }
+  }
+
+  useEffect(() => {
+    if (addMode === "library") loadLibrary()
+  }, [addMode])
+
+  function addFromLibrary(item: typeof library[number]) {
+    const url = item.url || `/api/media/${item.id}`
+    const type: CarouselSlide["type"] = item.mime_type?.startsWith("video/") ? "video"
+      : item.mime_type === "application/pdf" ? "pdf" : "image"
+    setSlides([...slides, { type, url, caption: item.filename }])
   }
 
   function removeSlide(i: number) {
@@ -478,9 +552,17 @@ function CarouselEditor({ config, updateConfig, disabled }: {
         <div className="space-y-1.5 mb-2">
           {slides.map((slide, i) => (
             <div key={i} className="flex items-start gap-1.5 rounded-md border border-zinc-700 bg-zinc-800/50 p-2">
-              <span className="text-xs mt-0.5 shrink-0">{typeIcons[slide.type] ?? "?"}</span>
+              {/* Thumbnail preview */}
+              <div className="shrink-0 w-10 h-10 rounded overflow-hidden bg-zinc-900 border border-zinc-700 flex items-center justify-center">
+                {slide.type === "image" ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={slide.url} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <span className="text-sm">{typeIcons[slide.type] ?? "?"}</span>
+                )}
+              </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] text-zinc-300 truncate" title={slide.url}>{slide.url}</p>
+                <p className="text-[10px] text-zinc-300 truncate" title={slide.url}>{slide.caption || slide.url}</p>
                 <input
                   value={slide.caption ?? ""}
                   onChange={(e) => updateSlideCaption(i, e.target.value)}
@@ -503,33 +585,132 @@ function CarouselEditor({ config, updateConfig, disabled }: {
         </div>
       )}
 
-      {/* Add slide */}
-      <div className="rounded-md border border-dashed border-zinc-700 p-2 space-y-1.5">
-        <p className="text-[10px] text-zinc-500 font-medium">Add Slide</p>
-        <input
-          value={newUrl}
-          onChange={(e) => { setNewUrl(e.target.value); setNewType(detectType(e.target.value)) }}
-          placeholder="Image URL, YouTube link, PDF URL, or video URL"
-          disabled={disabled}
-          className="w-full rounded-md bg-zinc-800 px-2 py-1.5 text-xs text-zinc-200 outline-none border border-zinc-700 focus:border-orange-500/30"
-        />
-        {newUrl && (
-          <div className="flex items-center gap-1 text-[10px] text-zinc-500">
-            <span>{typeIcons[newType]}</span>
-            <span>Detected: <strong className="text-zinc-400">{newType}</strong></span>
+      {/* Add slide area */}
+      <div className="rounded-md border border-dashed border-zinc-700 p-2 space-y-2">
+        <p className="text-[10px] text-zinc-500 font-medium">Add Slides</p>
+
+        {/* Source tabs */}
+        <div className="flex rounded-lg bg-zinc-800/50 p-0.5">
+          {([
+            { key: "upload" as const, label: "Upload" },
+            { key: "library" as const, label: "Library" },
+            { key: "url" as const, label: "URL / YouTube" },
+          ]).map((t) => (
+            <button key={t.key} onClick={() => setAddMode(t.key)} disabled={disabled}
+              className={`flex-1 rounded-md px-2 py-1 text-[10px] font-medium transition-colors ${
+                addMode === t.key ? "bg-zinc-700 text-zinc-200" : "text-zinc-500 hover:text-zinc-300"
+              } disabled:opacity-50`}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Upload tab */}
+        {addMode === "upload" && (
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={handleDrop}
+            onClick={() => !disabled && fileRef.current?.click()}
+            className={`flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-lg border-2 border-dashed p-4 transition-colors ${
+              dragOver ? "border-orange-400 bg-orange-500/10" : "border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800/30"
+            } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+          >
+            {uploading ? (
+              <div className="flex items-center gap-2">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-600 border-t-orange-400" />
+                <span className="text-xs text-zinc-400">Uploading...</span>
+              </div>
+            ) : (
+              <>
+                <svg className="h-6 w-6 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                </svg>
+                <span className="text-[11px] text-zinc-400">Drop files here or click to browse</span>
+                <span className="text-[9px] text-zinc-600">Images, PDFs, Videos &middot; Max 50 MB each</span>
+              </>
+            )}
+            <input ref={fileRef} type="file" accept="image/*,video/*,.pdf" multiple className="hidden" onChange={handleFileChange} />
           </div>
         )}
-        <input
-          value={newCaption}
-          onChange={(e) => setNewCaption(e.target.value)}
-          placeholder="Caption (optional)"
-          disabled={disabled}
-          className="w-full rounded-md bg-zinc-800 px-2 py-1.5 text-xs text-zinc-200 outline-none border border-zinc-700 focus:border-orange-500/30"
-        />
-        <button onClick={addSlide} disabled={!newUrl.trim() || disabled}
-          className="rounded-md bg-orange-600/80 px-3 py-1 text-[11px] font-medium text-white hover:bg-orange-500 disabled:opacity-30">
-          + Add Slide
-        </button>
+
+        {/* Library tab */}
+        {addMode === "library" && (
+          <div>
+            {loadingLib ? (
+              <div className="py-3 text-center text-xs text-zinc-500">Loading library...</div>
+            ) : library.length === 0 ? (
+              <div className="py-3 text-center text-xs text-zinc-600">
+                No media uploaded yet.
+                <button onClick={() => setAddMode("upload")} className="ml-1 text-orange-400 hover:underline">Upload files</button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-1.5 max-h-40 overflow-y-auto pr-1">
+                {library.map((m) => {
+                  const isImage = m.mime_type?.startsWith("image/")
+                  const isPdf = m.mime_type === "application/pdf"
+                  const isVideo = m.mime_type?.startsWith("video/")
+                  const alreadyAdded = slides.some((s) => s.url === m.url || s.url === `/api/media/${m.id}`)
+                  return (
+                    <button key={m.id} onClick={() => addFromLibrary(m)} disabled={disabled || alreadyAdded}
+                      className={`relative aspect-square overflow-hidden rounded-lg border-2 transition-all ${
+                        alreadyAdded ? "border-orange-400/50 opacity-50" : "border-zinc-700 hover:border-orange-400/50"
+                      } disabled:cursor-not-allowed`}>
+                      {isImage ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img src={m.url || `/api/media/${m.id}`} alt={m.filename} className="h-full w-full object-cover" loading="lazy" />
+                      ) : (
+                        <div className="flex h-full flex-col items-center justify-center bg-zinc-800 gap-0.5">
+                          <span className="text-lg">{isPdf ? "📄" : isVideo ? "🎬" : "📁"}</span>
+                          <span className="text-[7px] text-zinc-500 truncate max-w-full px-1">{m.filename}</span>
+                        </div>
+                      )}
+                      {alreadyAdded && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                          <span className="rounded bg-orange-500 px-1 py-0.5 text-[7px] font-bold text-white">ADDED</span>
+                        </div>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+            <button onClick={() => loadLibrary()} disabled={loadingLib}
+              className="mt-1 text-[10px] text-zinc-600 hover:text-zinc-400 disabled:opacity-30">Refresh</button>
+          </div>
+        )}
+
+        {/* URL tab */}
+        {addMode === "url" && (
+          <div className="space-y-1.5">
+            <input
+              value={newUrl}
+              onChange={(e) => setNewUrl(e.target.value)}
+              placeholder="Image URL, YouTube link, PDF URL, or video URL"
+              disabled={disabled}
+              className="w-full rounded-md bg-zinc-800 px-2 py-1.5 text-xs text-zinc-200 outline-none border border-zinc-700 focus:border-orange-500/30"
+            />
+            {newUrl && (
+              <div className="flex items-center gap-1 text-[10px] text-zinc-500">
+                <span>{typeIcons[detectType(newUrl)]}</span>
+                <span>Detected: <strong className="text-zinc-400">{detectType(newUrl)}</strong></span>
+              </div>
+            )}
+            <input
+              value={newCaption}
+              onChange={(e) => setNewCaption(e.target.value)}
+              placeholder="Caption (optional)"
+              disabled={disabled}
+              className="w-full rounded-md bg-zinc-800 px-2 py-1.5 text-xs text-zinc-200 outline-none border border-zinc-700 focus:border-orange-500/30"
+            />
+            <button onClick={addUrlSlide} disabled={!newUrl.trim() || disabled}
+              className="rounded-md bg-orange-600/80 px-3 py-1 text-[11px] font-medium text-white hover:bg-orange-500 disabled:opacity-30">
+              + Add Slide
+            </button>
+          </div>
+        )}
+
+        {error && <p className="text-[10px] text-red-400">{error}</p>}
       </div>
 
       {/* Carousel settings */}
