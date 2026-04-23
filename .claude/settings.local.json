@@ -80,7 +80,9 @@
       "Bash(curl -s https://api.github.com/repos/jeeliz/jeelizWeboji/contents/)",
       "Bash(curl -s https://api.github.com/repos/jeeliz/jeelizWeboji/contents/doc)",
       "Bash(curl -s https://raw.githubusercontent.com/jeeliz/jeelizWeboji/master/LICENSE)",
-      "Bash(curl -s https://registry.npmjs.org/-/v1/search?text=jeelizFaceExpressions)"
+      "Bash(curl -s https://registry.npmjs.org/-/v1/search?text=jeelizFaceExpressions)",
+      "Bash(npm uninstall *)",
+      "Bash(bash -n \"C:/Users/ld/Documents/GitHub/RunaNet/runaos.sh\")"
     ]
   }
 }
