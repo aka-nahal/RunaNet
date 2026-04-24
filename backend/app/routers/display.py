@@ -1,3 +1,4 @@
+import asyncio
 import json
 from datetime import datetime
 from pathlib import Path
@@ -83,7 +84,7 @@ async def report_resolution(data: dict) -> dict:
     )
     _last_resolution = payload
     if geometry_changed:
-        _save_resolution(payload)
+        await asyncio.to_thread(_save_resolution, payload)
     return payload
 
 

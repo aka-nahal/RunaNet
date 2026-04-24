@@ -28,3 +28,10 @@ async def init_db() -> None:
         Path("./data").mkdir(parents=True, exist_ok=True)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # create_all skips existing tables entirely, so indexes declared after
+        # the initial table creation never get built. Create any missing ones.
+        def _ensure_indexes(sync_conn):
+            for table in Base.metadata.tables.values():
+                for index in table.indexes:
+                    index.create(bind=sync_conn, checkfirst=True)
+        await conn.run_sync(_ensure_indexes)

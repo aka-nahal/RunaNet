@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { memo, useCallback, useEffect, useState } from "react"
 import { rectToGridPlacement } from "@/lib/grid-engine"
 import type { DisplayBundle, DisplayTileDTO, TileConfig } from "@/lib/types"
 import { ClockWidget } from "@/components/clock-widget"
@@ -230,7 +230,7 @@ function priorityBorderColor(priority: number, isEmergency: boolean): string {
   return "border-white/[0.06]"
 }
 
-function TileCard({ item }: { item: DisplayTileDTO }) {
+function TileCardInner({ item }: { item: DisplayTileDTO }) {
   const { tile, notice, media_url, effective_priority, is_visible_by_schedule } = item
   const { gridRow, gridColumn } = rectToGridPlacement({
     x: tile.grid_x, y: tile.grid_y, w: tile.grid_w, h: tile.grid_h
@@ -291,6 +291,15 @@ function TileCard({ item }: { item: DisplayTileDTO }) {
     </article>
   )
 }
+
+// Every bundle refresh creates fresh object references for each item, so React.memo's
+// default reference check does nothing. JSON-stringify comparison is cheap for the
+// tile counts this board handles (tens, not thousands) and lets unchanged tiles skip
+// re-render, which is the actual win — the runtime cost is re-mounting heavy widgets
+// (video, pdf, carousel) when their parent item is structurally identical.
+const TileCard = memo(TileCardInner, (prev, next) =>
+  JSON.stringify(prev.item) === JSON.stringify(next.item)
+)
 
 export function DisplayCanvas({ refreshInterval = DEFAULT_REFRESH_MS }: { refreshInterval?: number }) {
   const [bundle, setBundle] = useState<DisplayBundle | null>(null)

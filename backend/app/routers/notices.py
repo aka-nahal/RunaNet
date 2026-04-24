@@ -1,6 +1,6 @@
 import json
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,8 +13,14 @@ router = APIRouter()
 
 
 @router.get("", response_model=list[NoticeRead])
-async def list_notices(db: AsyncSession = Depends(get_db)) -> list[NoticeRead]:
-    result = await db.execute(select(Notice).order_by(Notice.updated_at.desc()))
+async def list_notices(
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=500),
+    db: AsyncSession = Depends(get_db),
+) -> list[NoticeRead]:
+    result = await db.execute(
+        select(Notice).order_by(Notice.updated_at.desc()).offset(skip).limit(limit)
+    )
     rows = result.scalars().all()
     return [notice_to_read(n) for n in rows]
 

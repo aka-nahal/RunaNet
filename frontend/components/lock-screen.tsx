@@ -13,10 +13,21 @@ export function LockScreen({ visible }: { visible: boolean }) {
   const [now, setNow] = useState<Date | null>(null)
 
   useEffect(() => {
+    if (!visible) return
+    // HH:MM display changes once per minute — align the tick to the next
+    // minute boundary rather than polling once a second.
     setNow(new Date())
-    const id = setInterval(() => setNow(new Date()), 1000)
-    return () => clearInterval(id)
-  }, [])
+    let intervalId: ReturnType<typeof setInterval> | null = null
+    const msToNextMinute = 60_000 - (Date.now() % 60_000)
+    const timeoutId = setTimeout(() => {
+      setNow(new Date())
+      intervalId = setInterval(() => setNow(new Date()), 60_000)
+    }, msToNextMinute)
+    return () => {
+      clearTimeout(timeoutId)
+      if (intervalId) clearInterval(intervalId)
+    }
+  }, [visible])
 
   const time = now
     ? now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })

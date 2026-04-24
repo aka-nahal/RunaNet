@@ -13,12 +13,12 @@ class Notice(Base):
     title: Mapped[str] = mapped_column(String(512), default="")
     body: Mapped[str] = mapped_column(Text, default="")
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)
-    category: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    category: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
     tags_json: Mapped[str | None] = mapped_column(Text, nullable=True)
-    priority: Mapped[int] = mapped_column(Integer, default=0)
+    priority: Mapped[int] = mapped_column(Integer, default=0, index=True)
     locale: Mapped[str] = mapped_column(String(16), default="en")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, index=True)
     ai_metadata_json: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     tiles: Mapped[list["Tile"]] = relationship(
