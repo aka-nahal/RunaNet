@@ -171,6 +171,32 @@ export interface TileConfig {
   carouselShowProgress?: boolean | string
   carouselKenBurns?: boolean | string
   carouselFit?: "cover" | "contain" | "fill" | string
+  // Image
+  imageFit?: "cover" | "contain" | "fill" | string
+  // Video
+  videoFit?: "cover" | "contain" | "fill" | string
+  // PDF
+  pdfUrl?: string
+  pdfPage?: number
+  pdfTotalPages?: number
+  pdfAutoAdvanceSec?: number
+  pdfShowChrome?: boolean | string
+  pdfFit?: "page" | "width" | "height" | string
+  // Sensor
+  sensorType?: string
+  sensorRefreshSec?: number
+  // Timetable
+  timetableId?: number | string
+  timetableShowTeacher?: boolean | string
+  timetableShowRoom?: boolean | string
+  // Layout / typography
+  textAlign?: "left" | "center" | "right" | string
+  verticalAlign?: "top" | "center" | "bottom" | string
+  titleWeight?: "normal" | "medium" | "semibold" | "bold" | "extrabold" | string
+  titleColor?: string
+  padding?: number
+  // Allow forward-compatible config keys without breaking the build
+  [key: string]: unknown
 }
 
 export interface DisplayTileDTO {
